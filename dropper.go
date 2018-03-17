@@ -29,8 +29,10 @@ func Initialise() (enter, leave chan struct{}, drop chan []File) {
 	enter = make(chan struct{})
 	leave = make(chan struct{})
 	drop = make(chan []File)
+	var over bool
 	document.AddEventListener("drop", true, func(ev dom.Event) {
 		ev.PreventDefault()
+		over = false
 		items := ev.Underlying().Get("dataTransfer").Get("items")
 		var out []File
 		var wait sync.WaitGroup
@@ -79,23 +81,38 @@ func Initialise() (enter, leave chan struct{}, drop chan []File) {
 	})
 	document.AddEventListener("dragover", true, func(ev dom.Event) {
 		ev.PreventDefault()
+		if !over {
+			over = true
+			select {
+			case enter <- struct{}{}:
+				// great!
+			default:
+				// nothing was listening.
+			}
+		}
 	})
 	document.AddEventListener("dragenter", true, func(ev dom.Event) {
 		ev.PreventDefault()
-		select {
-		case enter <- struct{}{}:
-			// great!
-		default:
-			// nothing was listening.
+		if !over {
+			over = true
+			select {
+			case enter <- struct{}{}:
+				// great!
+			default:
+				// nothing was listening.
+			}
 		}
 	})
 	document.AddEventListener("dragleave", true, func(ev dom.Event) {
 		ev.PreventDefault()
-		select {
-		case leave <- struct{}{}:
-			// great!
-		default:
-			// nothing was listening.
+		if over {
+			over = false
+			select {
+			case leave <- struct{}{}:
+				// great!
+			default:
+				// nothing was listening.
+			}
 		}
 	})
 	return
