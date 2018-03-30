@@ -23,14 +23,15 @@ func (f File) Reader() *files.FileReader {
 	return files.NewFileReader(f.File)
 }
 
-func Initialise() (enter, leave chan struct{}, drop chan []File) {
-	var window = dom.GetWindow()
-	var document = window.Document().(dom.HTMLDocument)
+func Initialise(target dom.EventTarget) (enter, leave chan struct{}, drop chan []File) {
+	if target == nil {
+		target = dom.GetWindow().Document()
+	}
 	enter = make(chan struct{})
 	leave = make(chan struct{})
 	drop = make(chan []File)
 	var over bool
-	document.AddEventListener("drop", true, func(ev dom.Event) {
+	target.AddEventListener("drop", true, func(ev dom.Event) {
 		ev.PreventDefault()
 		over = false
 		items := ev.Underlying().Get("dataTransfer").Get("items")
@@ -79,7 +80,7 @@ func Initialise() (enter, leave chan struct{}, drop chan []File) {
 			}
 		}()
 	})
-	document.AddEventListener("dragover", true, func(ev dom.Event) {
+	target.AddEventListener("dragover", true, func(ev dom.Event) {
 		ev.PreventDefault()
 		if !over {
 			over = true
@@ -91,7 +92,7 @@ func Initialise() (enter, leave chan struct{}, drop chan []File) {
 			}
 		}
 	})
-	document.AddEventListener("dragenter", true, func(ev dom.Event) {
+	target.AddEventListener("dragenter", true, func(ev dom.Event) {
 		ev.PreventDefault()
 		if !over {
 			over = true
@@ -103,7 +104,7 @@ func Initialise() (enter, leave chan struct{}, drop chan []File) {
 			}
 		}
 	})
-	document.AddEventListener("dragleave", true, func(ev dom.Event) {
+	target.AddEventListener("dragleave", true, func(ev dom.Event) {
 		ev.PreventDefault()
 		if over {
 			over = false
