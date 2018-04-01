@@ -15,6 +15,10 @@ type File struct {
 	dir string
 }
 
+func (f File) Dir() string {
+	return f.dir
+}
+
 func (f File) Path() string {
 	return filepath.Join(f.dir, f.Name())
 }
