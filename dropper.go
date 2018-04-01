@@ -43,6 +43,9 @@ func Initialise(target dom.EventTarget) (enter, leave chan struct{}, drop chan [
 		var wait sync.WaitGroup
 		var processEntry func(string, *js.Object)
 		processEntry = func(dir string, entry *js.Object) {
+			if entry.Interface() == nil {
+				return
+			}
 			if entry.Get("isFile").Bool() {
 				wait.Add(1)
 				entry.Call("file", func(f *js.Object) {
