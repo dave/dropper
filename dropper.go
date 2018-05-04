@@ -10,6 +10,11 @@ import (
 	"honnef.co/go/js/dom"
 )
 
+type Event interface{}
+type DropEvent []File
+type EnterEvent struct{}
+type LeaveEvent struct{}
+
 type File struct {
 	files.File
 	dir string
@@ -27,13 +32,11 @@ func (f File) Reader() *files.FileReader {
 	return files.NewFileReader(f.File)
 }
 
-func Initialise(target dom.EventTarget) (enter, leave chan struct{}, drop chan []File) {
+func Initialise(target dom.EventTarget) chan Event {
 	if target == nil {
 		target = dom.GetWindow().Document()
 	}
-	enter = make(chan struct{})
-	leave = make(chan struct{})
-	drop = make(chan []File)
+	events := make(chan Event)
 	var over bool
 	target.AddEventListener("drop", true, func(ev dom.Event) {
 		ev.PreventDefault()
@@ -80,7 +83,7 @@ func Initialise(target dom.EventTarget) (enter, leave chan struct{}, drop chan [
 		go func() {
 			wait.Wait()
 			select {
-			case drop <- out:
+			case events <- DropEvent(out):
 				// great!
 			default:
 				// nothing was listening.
@@ -92,7 +95,7 @@ func Initialise(target dom.EventTarget) (enter, leave chan struct{}, drop chan [
 		if !over {
 			over = true
 			select {
-			case enter <- struct{}{}:
+			case events <- EnterEvent{}:
 				// great!
 			default:
 				// nothing was listening.
@@ -104,7 +107,7 @@ func Initialise(target dom.EventTarget) (enter, leave chan struct{}, drop chan [
 		if !over {
 			over = true
 			select {
-			case enter <- struct{}{}:
+			case events <- EnterEvent{}:
 				// great!
 			default:
 				// nothing was listening.
@@ -116,12 +119,12 @@ func Initialise(target dom.EventTarget) (enter, leave chan struct{}, drop chan [
 		if over {
 			over = false
 			select {
-			case leave <- struct{}{}:
+			case events <- LeaveEvent{}:
 				// great!
 			default:
 				// nothing was listening.
 			}
 		}
 	})
-	return
+	return events
 }
